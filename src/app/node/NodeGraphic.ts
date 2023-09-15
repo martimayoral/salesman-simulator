@@ -1,15 +1,20 @@
 import * as PIXI from 'pixi.js'
 import { App } from '../../main';
 import { nodes } from '../app';
+import { Ease, ease } from 'pixi-ease'
+import { ButtonBase } from '../ui/ButtonBase';
 
 const MS_TO_DELETE_NODE = 200
+
+const animationDuration = 100
 
 let dragTarget: NodeGraphic = null;
 let clickData: { time: number, x: number, y: number } = { time: 0, x: 0, y: 0 }
 
 function onDragMove(event: PIXI.InteractionEvent) {
     if (dragTarget) {
-        dragTarget.parent.toLocal(event.data.global, null, dragTarget.position);
+        dragTarget.parent.toLocal(event.data.global, null, dragTarget.position)
+        nodes.moveNodeData(dragTarget.index, dragTarget.x, dragTarget.y)
     }
 }
 
@@ -18,7 +23,6 @@ function onDragStart(e: PIXI.InteractionEvent) {
     // the reason for this is because of multitouch
     // we want to track the movement of this particular touch
     // this.data = event.data;
-    this.alpha = 0.5
     dragTarget = this
     clickData = { time: Date.now(), x: e.data.global.x, y: e.data.global.y }
 
@@ -32,9 +36,8 @@ function onDragEnd(e: PIXI.InteractionEvent) {
         App.stage.off('pointermove', onDragMove);
         App.stage.off('pointerup', onDragEnd)
         App.stage.off('pointerupoutside', onDragEnd)
-        dragTarget.alpha = 1;
 
-        const index = dragTarget.parent.getChildIndex(dragTarget)
+        const index = dragTarget.index
 
         if (clickData.time + MS_TO_DELETE_NODE < Date.now()
             && clickData.x === e.data.global.x
@@ -48,7 +51,7 @@ function onDragEnd(e: PIXI.InteractionEvent) {
     }
 }
 
-export class NodeGraphic extends PIXI.Graphics {
+export class NodeGraphic extends ButtonBase {
     constructor(x: number, y: number) {
         super()
 
@@ -63,9 +66,30 @@ export class NodeGraphic extends PIXI.Graphics {
         const text = this.addChild(new PIXI.Text("", { fill: 0xffffff }))
         setTimeout(() => {
             App.ticker.add(() => {
-                text.text = this.parent?.getChildIndex(this)
+                text.text = this.index
             }, this)
         }, 200);
+
+        this.scale.set(0)
+
+        ease.add(
+            this,
+            { scale: 1 },
+            { duration: animationDuration, ease: 'easeOutBack' }
+        )
+    }
+
+    get index() { return this.parent?.getChildIndex(this) }
+
+    destroy(options?: boolean | PIXI.IDestroyOptions): void {
+        ease.add(
+            this,
+            { scale: 0 },
+            { duration: animationDuration, ease: 'easeInBack' }
+        )
+        setTimeout(() => {
+            super.destroy(options)
+        }, animationDuration);
     }
 
 }

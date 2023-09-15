@@ -4,5 +4,5 @@ export function getSmallDateId() {
 }
 
 export function getRandomId() {
-    return (Math.random() * 1000000000).toFixed(0)
+    return (Math.random() * 1000000000).toFixed(0).padStart(10, '0')
 }

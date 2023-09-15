@@ -24,8 +24,8 @@ export class Nodes {
     }
 
     onNodesChange() {
+        // console.log("nodes changed")
         App.onNodesChange()
-        console.log("nodes changed")
     }
 
     getNode(nodeIndex: number) {
@@ -57,15 +57,8 @@ export class Nodes {
         return this._nodes.length
     }
 
-    private getRandomNewId() {
-        const randomNewId = getRandomId()
-        if (this._nodes[randomNewId] !== undefined)
-            return this.getRandomNewId()
-        return randomNewId
-    }
-
     moveNodeData(index: number, x: number, y: number) {
-        console.log("moveNodeData", index)
+        // console.log("moveNodeData", index)
         this._nodes[index].x = x
         this._nodes[index].y = y
         this.onNodesChange()
@@ -73,9 +66,7 @@ export class Nodes {
 
     deleteNode(nodeIndex: number) {
 
-        console.log(this._nodes)
         this._nodes.splice(nodeIndex, 1)
-        console.log(this._nodes)
 
 
         this._nodesGraphic.getChildAt(nodeIndex).destroy()

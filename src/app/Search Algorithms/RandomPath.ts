@@ -1,4 +1,4 @@
-import { nodes } from "../app";
+import { nodes, ui } from "../app";
 import { SearchAlgorithmBase } from "./SearchAlgorithmBase";
 
 
@@ -7,10 +7,12 @@ export class RandomPathAlgorithm extends SearchAlgorithmBase {
 
     constructor() {
         super()
-        this.start()
+        this.algorithmName = "Random Path"
     }
 
     async computeGeneration() {
+        this.generations.push([])
+
         const allNodes = nodes.allNodes
 
         const getRandomNode = () => {

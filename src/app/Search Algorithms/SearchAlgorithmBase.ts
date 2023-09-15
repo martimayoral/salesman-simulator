@@ -1,6 +1,7 @@
 import * as PIXI from 'pixi.js'
 import { DistanceBetweenNodes, NodeData, NodeGroup } from '../node/Nodes'
-import { nodes, ui } from '../app'
+import { algorithmGraphic, nodes, ui } from '../app'
+import { getRandomId } from '../utils'
 
 export function getRouteDist(route: number[]) {
     var tourDist = 0
@@ -29,12 +30,15 @@ export function drawRoute(graphic: PIXI.Graphics, route: number[], pathColor?: n
     graphic.lineTo(node0.x, node0.y)
 }
 
-export class SearchAlgorithmBase extends PIXI.Graphics {
+export class SearchAlgorithmBase {
+
+    algorithmName: string = ""
     generations: number[][]
     bestGenerations: number[][]
     bestDist: number | undefined
-    _generationsRunning: number = 0
-    _generationsToRun: number = 1
+    _startId: string
+
+    isRunning = false
 
     maxGens: number = 10000
 
@@ -43,28 +47,36 @@ export class SearchAlgorithmBase extends PIXI.Graphics {
     }
 
     constructor() {
-        super()
-        this.reset()
+        // this.reset()
     }
 
     reset() {
-        this.clear()
+        algorithmGraphic.clear()
         this.bestDist = undefined
         this.generations = []
         this.bestGenerations = []
+        ui.algorithmNameText = this.algorithmName
+        this._startId = getRandomId()
+        this.computeGeneration()
+        // console.log("DRAW ROUTE", this.isRunning)
+        this.uiSetGenNumText()
+
+        const genDist = getRouteDist(this.generations[this.generations.length - 1])
+        ui.bestDistText = genDist
+
+        algorithmGraphic.lineStyle(3, 0x00ffff)
+        drawRoute(algorithmGraphic, this.generations[0])
     }
 
+    start() {
+        // console.log("start", this.algorithmName)
+        this.isRunning = true
+        this.newGeneration(this._startId)
+    }
 
-    start(): void {
-        console.log("start")
-        this.reset()
-
-        var gensRunnedLoop = 0
-        while (this._generationsRunning < this._generationsToRun && gensRunnedLoop < this._generationsToRun) {
-            this._generationsRunning++
-            gensRunnedLoop++
-            this.newGeneration()
-        }
+    stop() {
+        this.isRunning = false
+        // console.log("stop", this.algorithmName)
     }
 
     async computeGeneration(generationData: any = undefined) {
@@ -72,27 +84,26 @@ export class SearchAlgorithmBase extends PIXI.Graphics {
         console.warn("No generation algorithm running")
     }
 
-    newGeneration(): void {
-        this.generations.push([])
+    uiSetGenNumText() {
+        ui.setGenNumText(this.generations.length, this.maxGens)
+    }
+
+    newGeneration(genStartId: string): void {
 
         new Promise((resolve) => {
-            // console.log("START PROMISE")
+            // console.log("START PROMISE", genStartId, this._startId)
             this.computeGeneration()
 
-            // console.log("this.generations", this.generations)
-            // if (this.currentGeneration.length > 0)
             this.checkIfIsBestDist()
 
             setTimeout(() => {
                 resolve('resolved');
             });
         }).then(() => {
-            // console.log("THEN PROMISE")
-            ui.setGenNumText(this.generations.length, this.maxGens)
-            if (this.generations.length < this.maxGens) {
-                this.newGeneration()
-            } else {
-                this._generationsRunning--
+            // console.log("THEN PROMISE", genStartId, this._startId)
+            if (this.generations.length < this.maxGens && this._startId === genStartId && this.isRunning) {
+                this.uiSetGenNumText()
+                this.newGeneration(genStartId)
             }
         })
     }
@@ -108,20 +119,23 @@ export class SearchAlgorithmBase extends PIXI.Graphics {
             // if (this.bestDist) // only run once
             return false
 
-        console.log("genDist", genDist)
+        // console.log("new best genDist", genDist)
 
         ui.bestDistText = genDist
 
         this.bestDist = genDist
         this.bestGenerations.push(this.currentGeneration)
-        this.drawGeneration()
+
+        algorithmGraphic.clear()
+        this.drawBestGeneration()
         return true
     }
 
 
-    drawGeneration(num: number = this.bestGenerations.length - 1) {
-        this.clear()
-        this.lineStyle(3, 0x0000ff)
+    drawBestGeneration(num: number = this.bestGenerations.length - 1) {
+        if (num < 0) return
+
+        algorithmGraphic.lineStyle(3, 0x00ffff)
         // console.log("draw generation")
 
         const generation = this.bestGenerations[num]
@@ -130,6 +144,6 @@ export class SearchAlgorithmBase extends PIXI.Graphics {
             return
         }
 
-        drawRoute(this, generation)
+        drawRoute(algorithmGraphic, generation)
     }
 }

@@ -18,24 +18,22 @@ function factorialize(num) {
     }
 }
 
-var startId = "0"
-
-
 export class HeapsCombinations extends SearchAlgorithmBase {
+    finished: boolean
 
     constructor() {
         super()
-        this.start()
+
+        this.algorithmName = "Heaps Combinations"
     }
 
-    start(): void {
-        this._generationsRunning = 0
-        startId = getRandomId()
-
-        super.start()
-
+    reset(): void {
         this.maxGens = (factorialize(nodes.numNodes)) / 2
+        if (this.finished)
+            this.isRunning = true
+        super.reset()
     }
+
 
     startNewGen(ids: number[], order: number[], i: number, genStartId: string, loop: number) {
         new Promise((resolve) => {
@@ -81,25 +79,38 @@ export class HeapsCombinations extends SearchAlgorithmBase {
         }).then(() => {
             ui.setGenNumText(this.generations.length, this.maxGens)
 
-            if (i < nodes.allNodes.length && genStartId === startId)
-                this.startNewGen(ids, order, i, genStartId, loop + 1)
+            if (genStartId === this._startId && this.isRunning) {
+                if (i < nodes.allNodes.length)
+                    this.startNewGen(ids, order, i, genStartId, loop + 1)
+                else
+                    this.finished = true
+            }
         })
     }
 
-    newGeneration(): void {
-        console.clear()
+    newGeneration(genStartId: string): void {
+        // console.clear()
 
         const order = Array(nodes.numNodes).fill(0)
 
-        const startingId = Array(nodes.numNodes).fill(0).map((zero, i) => i)
+        const startingOrder = Array(nodes.numNodes).fill(0).map((zero, i) => i)
 
         // this.generations.push(startingId)
         // this.checkIfIsBestDist()
 
-        console.log(startingId)
-        this.startNewGen(startingId, order, 0, startId, 0)
+        this.finished = false
+
+        // console.log(startingOrder)
+        this.startNewGen(startingOrder, order, 0, genStartId, 0)
 
     }
 
+    async computeGeneration() {
+        this.generations.push([])
 
+        const nodesId = nodes.allNodes
+        for (let i = 0; i < nodesId.length; i++) {
+            this.addPath(i)
+        }
+    }
 }
