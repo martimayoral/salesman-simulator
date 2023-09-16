@@ -1,7 +1,10 @@
 import * as PIXI from 'pixi.js'
 import { NodeGraphic } from "./NodeGraphic"
-import { App } from '../../main'
+import { App, CHANGE_ALGORITHM_TRANSITION_DURATION } from '../../main'
 import { getRandomId } from '../utils'
+import Cookies from 'js-cookie'
+import { ease } from 'pixi-ease'
+import { GameApp } from '../app'
 
 export interface NodeData {
     x: number,
@@ -21,11 +24,21 @@ export class Nodes {
 
     constructor() {
         this._nodesGraphic = new PIXI.Container<NodeGraphic>()
+
+        const rawNodesPositions = Cookies.get("nodesPositions")
+
+        if (rawNodesPositions) {
+            const nodes = JSON.parse(rawNodesPositions)
+            for (let i = 0; i < nodes.length; i++) {
+                this.addNode(nodes[i].x, nodes[i].y, { triggerOnNodesChange: false })
+            }
+        }
     }
 
     onNodesChange() {
         // console.log("nodes changed")
         App.onNodesChange()
+        Cookies.set("nodesPositions", JSON.stringify(this._nodes))
     }
 
     getNode(nodeIndex: number) {
@@ -87,5 +100,11 @@ export class Nodes {
         this._nodesGraphic.addChild(new NodeGraphic(x, y))
         if (options.triggerOnNodesChange)
             this.onNodesChange()
+    }
+
+    changeNodesColor() {
+        this._nodesGraphic.children.forEach(n => {
+            n.changeColor()
+        })
     }
 }

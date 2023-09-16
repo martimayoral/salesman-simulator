@@ -1,13 +1,12 @@
-import { nodes, ui } from "../app";
+import { nodes } from "../../main";
 import { SearchAlgorithmBase } from "./SearchAlgorithmBase";
 
 
 
 export class RandomPathAlgorithm extends SearchAlgorithmBase {
 
-    constructor() {
-        super()
-        this.algorithmName = "Random Path"
+    constructor(algorithmName: string) {
+        super(algorithmName)
     }
 
     async computeGeneration() {

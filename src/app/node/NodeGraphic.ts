@@ -1,8 +1,8 @@
 import * as PIXI from 'pixi.js'
-import { App } from '../../main';
-import { nodes } from '../app';
+import { App, CHANGE_ALGORITHM_TRANSITION_DURATION, nodes } from '../../main';
 import { Ease, ease } from 'pixi-ease'
 import { ButtonBase } from '../ui/ButtonBase';
+import { GameApp } from '../app';
 
 const MS_TO_DELETE_NODE = 200
 
@@ -51,22 +51,37 @@ function onDragEnd(e: PIXI.InteractionEvent) {
     }
 }
 
+const nodeSize = 10
+const nodeMargin = 4
+
 export class NodeGraphic extends ButtonBase {
+    centerGraphic: PIXI.Graphics
+
     constructor(x: number, y: number) {
         super()
 
-        this.beginFill(0x00ff00)
-            .drawCircle(0, 0, 10)
+        console.log("CONSTRUCT NODE")
+        this.beginFill(0xffffff)
+            .drawCircle(0, 0, nodeSize)
         this.x = x
         this.y = y
+
+        this.centerGraphic = this.addChild(
+            new PIXI.Graphics()
+                .beginFill(0xffffff)
+                .drawCircle(0, 0, nodeSize - nodeMargin)
+        )
+        this.changeColor()
 
         this.interactive = true
         this.on("pointerdown", onDragStart)
 
-        const text = this.addChild(new PIXI.Text("", { fill: 0xffffff }))
+        const text = this.addChild(new PIXI.Text("", { fill: 0xffffff, fontSize: 10 }))
         setTimeout(() => {
             App.ticker.add(() => {
                 text.text = this.index
+                text.pivot.x = text.width / 2
+                text.pivot.y = text.height / 2
             }, this)
         }, 200);
 
@@ -79,6 +94,14 @@ export class NodeGraphic extends ButtonBase {
         )
     }
 
+    changeColor() {
+        ease.add(this, { blend: [this.tint, GameApp.theme?.mainColor] }, { duration: CHANGE_ALGORITHM_TRANSITION_DURATION })
+        ease.add(this.centerGraphic, { blend: [this.centerGraphic.tint, GameApp.theme?.bgColor] }, { duration: CHANGE_ALGORITHM_TRANSITION_DURATION })
+
+        // this.tint = GameApp.theme?.mainColor
+        // this.centerGraphic.tint = GameApp.theme?.secondaryColor
+    }
+
     get index() { return this.parent?.getChildIndex(this) }
 
     destroy(options?: boolean | PIXI.IDestroyOptions): void {
@@ -86,10 +109,9 @@ export class NodeGraphic extends ButtonBase {
             this,
             { scale: 0 },
             { duration: animationDuration, ease: 'easeInBack' }
-        )
-        setTimeout(() => {
+        ).once("complete", () => {
             super.destroy(options)
-        }, animationDuration);
+        })
     }
 
 }

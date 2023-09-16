@@ -1,7 +1,8 @@
 import * as PIXI from 'pixi.js'
 import { DistanceBetweenNodes, NodeData, NodeGroup } from '../node/Nodes'
-import { algorithmGraphic, nodes, ui } from '../app'
+import { algorithmGraphic } from '../app'
 import { getRandomId } from '../utils'
+import { nodes, ui } from '../../main'
 
 export function getRouteDist(route: number[]) {
     var tourDist = 0
@@ -32,7 +33,9 @@ export function drawRoute(graphic: PIXI.Graphics, route: number[], pathColor?: n
 
 export class SearchAlgorithmBase {
 
-    algorithmName: string = ""
+    private _algorithmName: string
+    get algorithmName() { return this._algorithmName }
+
     generations: number[][]
     bestGenerations: number[][]
     bestDist: number | undefined
@@ -46,7 +49,8 @@ export class SearchAlgorithmBase {
         return this.generations[this.generations.length - 1]
     }
 
-    constructor() {
+    constructor(algorithmName: string) {
+        this._algorithmName = algorithmName
         // this.reset()
     }
 
@@ -55,7 +59,6 @@ export class SearchAlgorithmBase {
         this.bestDist = undefined
         this.generations = []
         this.bestGenerations = []
-        ui.algorithmNameText = this.algorithmName
         this._startId = getRandomId()
         this.computeGeneration()
         // console.log("DRAW ROUTE", this.isRunning)
@@ -64,7 +67,7 @@ export class SearchAlgorithmBase {
         const genDist = getRouteDist(this.generations[this.generations.length - 1])
         ui.bestDistText = genDist
 
-        algorithmGraphic.lineStyle(3, 0x00ffff)
+        algorithmGraphic.lineStyle(3, 0xffffff)
         drawRoute(algorithmGraphic, this.generations[0])
     }
 
@@ -135,7 +138,7 @@ export class SearchAlgorithmBase {
     drawBestGeneration(num: number = this.bestGenerations.length - 1) {
         if (num < 0) return
 
-        algorithmGraphic.lineStyle(3, 0x00ffff)
+        algorithmGraphic.lineStyle(3, 0xffffff)
         // console.log("draw generation")
 
         const generation = this.bestGenerations[num]

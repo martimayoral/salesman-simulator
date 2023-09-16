@@ -12,10 +12,12 @@
   "author": "Marti Mayoral",
   "license": "MIT",
   "dependencies": {
+    "@types/js-cookie": "^3.0.3",
     "@types/pixi.js": "^5.0.0",
     "babel-polyfill": "^6.26.0",
     "easy-astar": "^1.0.5",
     "firebase": "^8.2.9",
+    "js-cookie": "^3.0.5",
     "pixi-ease": "^3.0.7",
     "pixi.js": "^6.5.1",
     "regenerator-runtime": "^0.13.11"

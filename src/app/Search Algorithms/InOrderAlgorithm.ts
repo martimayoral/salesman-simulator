@@ -1,11 +1,11 @@
-import { nodes, ui } from "../app";
+import { nodes } from "../../main";
 import { SearchAlgorithmBase } from "./SearchAlgorithmBase";
 
 export class InOrderAlgorithm extends SearchAlgorithmBase {
-    constructor() {
-        super()
+    constructor(algorithmName: string) {
+        super(algorithmName)
+
         this.maxGens = 0
-        this.algorithmName = "In Order Algorithm"
     }
 
     start(): void {

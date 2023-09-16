@@ -1,54 +1,157 @@
 import * as PIXI from 'pixi.js'
 import { PillButton } from './PillButton'
-import { App } from '../../main'
+import { App, CHANGE_ALGORITHM_TRANSITION_DURATION, Theme } from '../../main'
 import { ButtonBase } from './ButtonBase'
 import { ease } from 'pixi-ease'
+import { TextButton } from './TextButton'
+import { BgChangeDirection } from '../Background'
 
 const textStyle: Partial<PIXI.TextStyle> = { fill: 0xffffff }
 
 // PREV AND NEXT BUTTON
-const initialOffset = -10
-const hoverOffset = 5
 const buttonSize = 50
-const prevButton = new PillButton(initialOffset, 0, buttonSize, buttonSize)
-prevButton.onClick = () => App.previousAlgorithm()
-const onPrevPointerOver = () => {
-    ease.add(prevButton, { x: hoverOffset }, { duration: 100 })
-    prevButton.on('pointerout', onPrevPointerOut)
-}
-const onPrevPointerOut = () => {
-    ease.add(prevButton, { x: initialOffset }, { duration: 100 })
-    prevButton.off('pointerout', onPrevPointerOut)
-}
-prevButton.on('pointerover', onPrevPointerOver)
 
-const nextButton = new PillButton(0, 0, buttonSize, buttonSize)
-nextButton.onClick = () => App.nextAlgorithm()
-const onNextPointerOver = () => {
-    ease.add(nextButton, { x: App.screen.width - hoverOffset }, { duration: 100 })
-    nextButton.on('pointerout', onNextPointerOut)
-}
+class AlgorithmTitle extends TextButton {
+    prevButton: PillButton
+    nextButton: PillButton
+    prevButtonArrow: PIXI.Graphics
+    nextButtonArrow: PIXI.Graphics
 
-const onNextPointerOut = () => {
-    ease.add(nextButton, { x: App.screen.width - initialOffset }, { duration: 100 })
-    nextButton.off('pointerout', onNextPointerOut)
+    constructor() {
+        super(0, 40, 5, 50, "", { fontSize: 35, fill: 0xffffff })
+
+        const prevAndNextButtonSize = this.height / 1.2
+        const bigArrowOffset = prevAndNextButtonSize / 4
+        this.prevButton = new PillButton(
+            prevAndNextButtonSize / 2 + (this.height - prevAndNextButtonSize) / 2,
+            prevAndNextButtonSize / 2 + (this.height - prevAndNextButtonSize) / 2,
+            prevAndNextButtonSize,
+            prevAndNextButtonSize)
+
+        this.prevButton.onClick = () => App.previousAlgorithm()
+        this.prevButtonArrow = this.prevButton
+            .addChild(new PIXI.Graphics())
+            .lineStyle(3, 0xffffff)
+            .moveTo(-bigArrowOffset + 3 * prevAndNextButtonSize / 4, prevAndNextButtonSize / 4)
+            .lineTo(-bigArrowOffset + prevAndNextButtonSize / 2, prevAndNextButtonSize / 2)
+            .lineTo(-bigArrowOffset + 3 * prevAndNextButtonSize / 4, 3 * prevAndNextButtonSize / 4)
+
+            .moveTo(4 * prevAndNextButtonSize / 6, 2 * prevAndNextButtonSize / 6)
+            .lineTo(prevAndNextButtonSize / 2, prevAndNextButtonSize / 2)
+            .lineTo(4 * prevAndNextButtonSize / 6, 4 * prevAndNextButtonSize / 6)
+
+
+        this.nextButton = new PillButton(
+            this.geometry.bounds.maxX - (prevAndNextButtonSize / 2 + (this.height - prevAndNextButtonSize) / 2),
+            prevAndNextButtonSize / 2 + (this.height - prevAndNextButtonSize) / 2,
+            prevAndNextButtonSize,
+            prevAndNextButtonSize)
+        this.nextButton.onClick = () => App.nextAlgorithm()
+
+        this.nextButtonArrow = this.nextButton
+            .addChild(new PIXI.Graphics())
+            .lineStyle(3, 0xffffff)
+            .moveTo(bigArrowOffset + prevAndNextButtonSize / 4, prevAndNextButtonSize / 4)
+            .lineTo(bigArrowOffset + prevAndNextButtonSize / 2, prevAndNextButtonSize / 2)
+            .lineTo(bigArrowOffset + prevAndNextButtonSize / 4, 3 * prevAndNextButtonSize / 4)
+
+            .moveTo(2 * prevAndNextButtonSize / 6, 2 * prevAndNextButtonSize / 6)
+            .lineTo(prevAndNextButtonSize / 2, prevAndNextButtonSize / 2)
+            .lineTo(2 * prevAndNextButtonSize / 6, 4 * prevAndNextButtonSize / 6)
+
+        this.onHoverScale = 1
+
+        this.addChild(this.prevButton)
+        this.addChild(this.nextButton)
+    }
+
+    setText(text: string): void {
+        super.setText(text)
+        this.removeChild(this.nextButton)
+        const prevAndNextButtonSize = this.height / 1.2
+        if (this.nextButton) {
+            this.nextButton.x = this.geometry.bounds.maxX - (prevAndNextButtonSize / 2 + (this.height - prevAndNextButtonSize) / 2)
+            this.addChild(this.nextButton)
+        }
+    }
+
+    setTheme(theme: Theme) {
+        this.tint = theme.mainColor
+        this._text.tint = theme.bgColor
+        this.nextButton.tint = this.prevButton.tint = theme.secondaryColor
+        this.nextButtonArrow.tint = this.prevButtonArrow.tint = theme.bgColor
+    }
+
+    changeTheme(algorithmName: string, theme: Theme, direction: BgChangeDirection = "instant") {
+        if (direction === "instant") {
+            this.setText(algorithmName)
+            this.setTheme(theme)
+            return
+        }
+
+        const cpy = new AlgorithmTitle()
+        this.addChild(cpy)
+        cpy.setText(algorithmName)
+        cpy.y = 0
+        cpy.pivot.y = 0
+
+        // cpy.x = 0
+        // cpy.pivot.x = 0
+        cpy.x = this.geometry.bounds.maxX / 2
+        cpy.x += direction === "left" ? -App.screen.width : App.screen.width
+        cpy.setTheme(theme)
+
+        // ease.add(cpy, { x: this.geometry.bounds.maxX / 2 }, { duration: CHANGE_ALGORITHM_TRANSITION_DURATION })
+        ease.add(this, { x: this.x + (direction === "left" ? App.screen.width : - App.screen.width) }, { duration: CHANGE_ALGORITHM_TRANSITION_DURATION })
+            .once('complete', () => {
+                this.setText(algorithmName)
+                this.setTheme(theme)
+                this.x = App.screen.width / 2
+                cpy.destroy(true)
+            })
+
+
+    }
 }
-nextButton.on('pointerover', onNextPointerOver)
 
 // START BUTTON
-const startStopButton = new PillButton(buttonSize, 0, buttonSize, buttonSize)
-startStopButton
-    .beginFill(0x00ffff)
-    .moveTo(buttonSize * .3, buttonSize * .2)
-    .lineTo(buttonSize * .3, buttonSize * .8)
-    .lineTo(buttonSize * .8, buttonSize * .5)
-    .lineTo(buttonSize * .3, buttonSize * .2)
-startStopButton.onClick = () => { App.togglePlayPause() }
+class StartStopButton extends PillButton {
+    buttonState: boolean
+
+    constructor() {
+        super(buttonSize, 0, buttonSize, buttonSize)
+        this.buttonState = false
+        this.onClick = () => {
+            if (this.buttonState)
+                App.stopAlgorithm()
+            else
+                App.startAlgorithm()
+        }
+    }
+
+    setStop() {
+        this.buttonState = false
+        this.beginFill(0xff0000)
+            .moveTo(buttonSize * .3, buttonSize * .2)
+            .lineTo(buttonSize * .3, buttonSize * .8)
+            .lineTo(buttonSize * .8, buttonSize * .5)
+            .lineTo(buttonSize * .3, buttonSize * .2)
+    }
+    setPlay() {
+        this.buttonState = true
+        this.beginFill(0x00ff00)
+            .moveTo(buttonSize * .3, buttonSize * .2)
+            .lineTo(buttonSize * .3, buttonSize * .8)
+            .lineTo(buttonSize * .8, buttonSize * .5)
+            .lineTo(buttonSize * .3, buttonSize * .2)
+    }
+}
 
 export class UI extends PIXI.Container {
     _genNumText: PIXI.Text
     _bestDistText: PIXI.Text
-    _algorithmNameText: PIXI.Text
+    algorithmTextTitle: AlgorithmTitle
+    startStopButton: StartStopButton
 
     constructor() {
         super()
@@ -63,33 +166,22 @@ export class UI extends PIXI.Container {
         this._bestDistText.y = 40
         this.bestDistText = 0
 
-        this._algorithmNameText = new PIXI.Text("", textStyle)
-        this._algorithmNameText.x = 10
-        this._algorithmNameText.y = 70
-        this.algorithmNameText = ""
+        this.algorithmTextTitle = new AlgorithmTitle()
+        this.addChild(this.algorithmTextTitle)
 
         this.addChild(this._genNumText)
         this.addChild(this._bestDistText)
-        this.addChild(this._algorithmNameText)
 
-        this.addChild(prevButton)
-        this.addChild(nextButton)
-        this.addChild(startStopButton)
-    }
-
-    createPlayPauseButton() {
-
+        this.addChild(this.startStopButton = new StartStopButton())
     }
 
     resize() {
         setTimeout(() => {
-            // PREV AND NEXT BUTTON
-            prevButton.y = App.screen.height / 2
-            nextButton.x = App.screen.width - initialOffset
-            nextButton.y = App.screen.height / 2
-
             // START STOP BUTTON
-            startStopButton.y = App.screen.height - buttonSize
+            this.startStopButton.y = App.screen.height - buttonSize
+
+            // Title
+            this.algorithmTextTitle.x = App.screen.width / 2
         })
     }
 
@@ -102,8 +194,10 @@ export class UI extends PIXI.Container {
     set bestDistText(bestDist: number) {
         this._bestDistText.text = "Best dist: " + bestDist.toFixed(0) + "km"
     }
-    set algorithmNameText(algorithm: string) {
-        this._algorithmNameText.text = "Algorithm: " + algorithm
+
+    changeTheme(algorithmName: string, theme: Theme, direction: BgChangeDirection = "instant") {
+        //     this.algorithmTextTitle.setText("Algorithm: " + algorithm)
+        this.algorithmTextTitle.changeTheme(algorithmName, theme, direction)
     }
 
 }

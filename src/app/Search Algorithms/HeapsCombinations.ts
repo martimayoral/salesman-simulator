@@ -1,5 +1,4 @@
-import { App } from "../../main";
-import { nodes, ui } from "../app";
+import { App, nodes, ui } from "../../main";
 import { getRandomId } from "../utils";
 import { SearchAlgorithmBase } from "./SearchAlgorithmBase";
 
@@ -21,10 +20,8 @@ function factorialize(num) {
 export class HeapsCombinations extends SearchAlgorithmBase {
     finished: boolean
 
-    constructor() {
-        super()
-
-        this.algorithmName = "Heaps Combinations"
+    constructor(algorithmName: string) {
+        super(algorithmName)
     }
 
     reset(): void {

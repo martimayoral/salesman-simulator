@@ -1,4 +1,5 @@
-import { algorithmGraphic, nodes, ui } from "../app";
+import { nodes, ui } from "../../main";
+import { algorithmGraphic } from "../app";
 import { NodeData } from "../node/Nodes";
 import { PillButton } from "../ui/PillButton";
 import { SearchAlgorithmBase, drawRoute, getRouteDist } from "./SearchAlgorithmBase";
@@ -147,13 +148,12 @@ class Ant {
 
 export class AntColonyAlgorithm extends SearchAlgorithmBase {
     ants: Ant[]
-    _drawPheromones: boolean = false
+    _drawPheromones: boolean = true
 
-    constructor() {
-        super()
+    constructor(algorithmName: string) {
+        super(algorithmName)
         this.maxGens = 9999
 
-        this.algorithmName = "Ant Colony Algorithm"
         const btn = ui.addChild(new PillButton(100, 600, 40, 40))
         btn.onClick = () => this.showPheromones = !this._drawPheromones
     }

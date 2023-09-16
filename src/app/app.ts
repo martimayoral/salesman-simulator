@@ -3,99 +3,135 @@ import { Nodes } from './node/Nodes';
 import { RandomPathAlgorithm } from './Search Algorithms/RandomPath';
 import { SearchAlgorithmBase } from './Search Algorithms/SearchAlgorithmBase';
 import { UI } from './ui/ui';
-import { Background } from './Background';
+import { Background, BgChangeDirection } from './Background';
 import { InOrderAlgorithm } from './Search Algorithms/InOrderAlgorithm';
 import { HeapsCombinations } from './Search Algorithms/HeapsCombinations';
 import { AntColonyAlgorithm } from './Search Algorithms/AntColonyAlgorithm';
+import Cookies from "js-cookie";
+import { CHANGE_ALGORITHM_TRANSITION_DURATION, Theme, bg, nodes, searchAlgorithms, ui } from '../main';
+import { ease } from 'pixi-ease';
 
 const N_INITIAL_NODES = 10
 
-export const nodes = new Nodes()
-export const ui = new UI()
-export const bg = new Background()
 export const algorithmGraphic = new PIXI.Graphics()
+export const appBgColor = 0x121212
 
 export class GameApp extends PIXI.Application {
-    searchAlgorithms: SearchAlgorithmBase[]
-    currentSearchAlgorithmIndex: number
+    static theme: Theme
+    currentSearchAlgorithmName: string
 
     constructor(parent: HTMLElement, width: number, height: number) {
-        super({ width, height, backgroundColor: 0x832334, antialias: true })
+        super({ width, height, backgroundColor: appBgColor, antialias: true })
         parent.replaceChild(this.view, parent.lastElementChild) // Hack for parcel HMR
 
         this.stage.hitArea = this.screen;
         this.stage.interactive = true
 
-        for (let i = 0; i < N_INITIAL_NODES; i++) {
-            nodes.addNode(
-                Math.floor(Math.random() * this.screen.width),
-                Math.floor(Math.random() * this.screen.height),
-                { triggerOnNodesChange: false }
-            )
-        }
+        if (nodes.numNodes === 0)
+            for (let i = 0; i < N_INITIAL_NODES; i++) {
+                nodes.addNode(
+                    Math.floor(Math.random() * this.screen.width),
+                    Math.floor(Math.random() * this.screen.height),
+                    { triggerOnNodesChange: false }
+                )
+            }
 
 
-        this.stage.addChild(bg)
+        setTimeout(() => {
+            var algorithmToRun = Cookies.get("currentSearchAlgorithmName")
+            if (!algorithmToRun)
+                algorithmToRun = "Heaps combinations"
 
-        this.searchAlgorithms = []
-        this.searchAlgorithms.push(new InOrderAlgorithm())
-        this.searchAlgorithms.push(new RandomPathAlgorithm())
-        this.searchAlgorithms.push(new HeapsCombinations())
-        this.searchAlgorithms.push(new AntColonyAlgorithm())
+            this.setAlgorithm(algorithmToRun)
+            // searchAlgorithms[this.currentSearchAlgorithmName].algorithm.reset()
+            // this.startAlgorithm()
 
+            // this.stage.addChild(this.searchAlgorithms[this.currentSearchAlgorithmIndex])
 
-        this.currentSearchAlgorithmIndex = 0
-        this.searchAlgorithms[this.currentSearchAlgorithmIndex].reset()
-        this.searchAlgorithms[this.currentSearchAlgorithmIndex].start()
-
-        // this.stage.addChild(this.searchAlgorithms[this.currentSearchAlgorithmIndex])
-
-        this.stage.addChild(algorithmGraphic)
-        this.stage.addChild(nodes.graphic)
-        this.stage.addChild(ui)
+            this.stage.addChild(bg)
+            this.stage.addChild(algorithmGraphic)
+            this.stage.addChild(nodes.graphic)
+            this.stage.addChild(ui)
+            this.resizeRenderer()
+        })
 
         document.body.onresize = () => {
             this.resizeRenderer()
         }
-        this.resizeRenderer()
     }
 
-    setAlgorithm(index: number) {
-        const wasRunning = this.searchAlgorithms[this.currentSearchAlgorithmIndex].isRunning
-        this.searchAlgorithms[this.currentSearchAlgorithmIndex].stop()
+    changeTheme(algorithmName: string, theme: Theme, direction: BgChangeDirection = "instant") {
+        bg.changeBg(theme.bgColor, direction)
+        ui.changeTheme(algorithmName, theme, direction)
+        nodes.changeNodesColor()
+        ease.add(algorithmGraphic, { blend: [algorithmGraphic.tint, theme.mainColor] }, { duration: CHANGE_ALGORITHM_TRANSITION_DURATION })
+    }
 
-        this.currentSearchAlgorithmIndex = index
-        if (this.currentSearchAlgorithmIndex >= this.searchAlgorithms.length)
-            this.currentSearchAlgorithmIndex = 0
+    setAlgorithm(name: string, direction: BgChangeDirection = "instant") {
+        const newAlgorithmToRun = searchAlgorithms[name]
+        if (!newAlgorithmToRun) {
+            console.warn("algorithm", name, "not found")
+            return
+        }
+        var wasPrevAlgorithmRunning: boolean = true
+        if (this.currentSearchAlgorithmName) {
+            const prevAlgorithmRunning = searchAlgorithms[this.currentSearchAlgorithmName].algorithm
+            wasPrevAlgorithmRunning = prevAlgorithmRunning.isRunning
+            prevAlgorithmRunning.stop()
+        }
 
-        if (this.currentSearchAlgorithmIndex < 0)
-            this.currentSearchAlgorithmIndex = this.searchAlgorithms.length - 1
 
-        this.searchAlgorithms[this.currentSearchAlgorithmIndex].reset()
+        newAlgorithmToRun.algorithm.reset()
+        if (wasPrevAlgorithmRunning)
+            newAlgorithmToRun.algorithm.start()
 
-        if (wasRunning)
-            this.searchAlgorithms[this.currentSearchAlgorithmIndex].start()
+        this.currentSearchAlgorithmName = name
+        GameApp.theme = newAlgorithmToRun.theme
+        this.changeTheme(this.currentSearchAlgorithmName, newAlgorithmToRun.theme, direction)
+
+        Cookies.set("currentSearchAlgorithmName", name)
     }
 
     nextAlgorithm() {
-        this.setAlgorithm(this.currentSearchAlgorithmIndex + 1)
+        const algorithmsList = Object.keys(searchAlgorithms)
+        for (let i = 0; i < algorithmsList.length; i++) {
+            if (algorithmsList[i] === this.currentSearchAlgorithmName) {
+                if (i + 1 < algorithmsList.length)
+                    this.setAlgorithm(algorithmsList[i + 1], "right")
+                else
+                    this.setAlgorithm(algorithmsList[0], "right")
+                return
+            }
+        }
     }
     previousAlgorithm() {
-        this.setAlgorithm(this.currentSearchAlgorithmIndex - 1)
+        const algorithmsList = Object.keys(searchAlgorithms)
+        for (let i = 0; i < algorithmsList.length; i++) {
+            if (algorithmsList[i] === this.currentSearchAlgorithmName) {
+                if (i - 1 >= 0)
+                    this.setAlgorithm(algorithmsList[i - 1], "left")
+                else
+                    this.setAlgorithm(algorithmsList[algorithmsList.length - 1], "left")
+                return
+            }
+        }
+
     }
 
     onNodesChange() {
         // console.clear()
-        this.searchAlgorithms[this.currentSearchAlgorithmIndex].reset()
-        if(this.searchAlgorithms[this.currentSearchAlgorithmIndex].isRunning)
-        this.searchAlgorithms[this.currentSearchAlgorithmIndex].start()
+        searchAlgorithms[this.currentSearchAlgorithmName].algorithm.reset()
+        if (searchAlgorithms[this.currentSearchAlgorithmName].algorithm.isRunning)
+            searchAlgorithms[this.currentSearchAlgorithmName].algorithm.start()
     }
 
-    togglePlayPause() {
-        if (this.searchAlgorithms[this.currentSearchAlgorithmIndex].isRunning)
-            this.searchAlgorithms[this.currentSearchAlgorithmIndex].stop()
-        else
-            this.searchAlgorithms[this.currentSearchAlgorithmIndex].start()
+    stopAlgorithm() {
+        searchAlgorithms[this.currentSearchAlgorithmName].algorithm.stop()
+        ui.startStopButton.setStop()
+    }
+    startAlgorithm() {
+        searchAlgorithms[this.currentSearchAlgorithmName].algorithm.start()
+        ui.startStopButton.setPlay()
     }
 
     resizeRenderer() {
@@ -105,6 +141,7 @@ export class GameApp extends PIXI.Application {
         this.renderer.resize(window.innerWidth, window.innerHeight)
 
         ui.resize()
+        bg.resize()
     }
 
 }
