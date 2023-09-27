@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js'
-import { App, CHANGE_ALGORITHM_TRANSITION_DURATION, nodes } from '../../main';
+import { gameApp, CHANGE_ALGORITHM_TRANSITION_DURATION, nodes } from '../../main';
 import { Ease, ease } from 'pixi-ease'
 import { ButtonBase } from '../ui/ButtonBase';
 import { GameApp } from '../app';
@@ -26,16 +26,16 @@ function onDragStart(e: PIXI.InteractionEvent) {
     dragTarget = this
     clickData = { time: Date.now(), x: e.data.global.x, y: e.data.global.y }
 
-    App.stage.on('pointermove', onDragMove)
-    App.stage.on('pointerup', onDragEnd)
-    App.stage.on('pointerupoutside', onDragEnd)
+    gameApp.stage.on('pointermove', onDragMove)
+    gameApp.stage.on('pointerup', onDragEnd)
+    gameApp.stage.on('pointerupoutside', onDragEnd)
 }
 
 function onDragEnd(e: PIXI.InteractionEvent) {
     if (dragTarget) {
-        App.stage.off('pointermove', onDragMove);
-        App.stage.off('pointerup', onDragEnd)
-        App.stage.off('pointerupoutside', onDragEnd)
+        gameApp.stage.off('pointermove', onDragMove);
+        gameApp.stage.off('pointerup', onDragEnd)
+        gameApp.stage.off('pointerupoutside', onDragEnd)
 
         const index = dragTarget.index
 
@@ -56,34 +56,31 @@ const nodeMargin = 4
 
 export class NodeGraphic extends ButtonBase {
     centerGraphic: PIXI.Graphics
+    text: PIXI.Text
+    deleted: boolean = false
 
     constructor(x: number, y: number) {
         super()
 
-        console.log("CONSTRUCT NODE")
         this.beginFill(0xffffff)
             .drawCircle(0, 0, nodeSize)
         this.x = x
         this.y = y
+        this.tint = GameApp.theme?.bgColor
 
         this.centerGraphic = this.addChild(
             new PIXI.Graphics()
                 .beginFill(0xffffff)
                 .drawCircle(0, 0, nodeSize - nodeMargin)
         )
-        this.changeColor()
+        this.centerGraphic.tint = GameApp.theme?.bgColor
+        if (GameApp.theme)
+            this.changeColor()
 
         this.interactive = true
         this.on("pointerdown", onDragStart)
 
-        const text = this.addChild(new PIXI.Text("", { fill: 0xffffff, fontSize: 10 }))
-        setTimeout(() => {
-            App.ticker.add(() => {
-                text.text = this.index
-                text.pivot.x = text.width / 2
-                text.pivot.y = text.height / 2
-            }, this)
-        }, 200);
+        this.text = this.addChild(new PIXI.Text("", { fill: 0xffffff, fontSize: 10 }))
 
         this.scale.set(0)
 
@@ -94,23 +91,36 @@ export class NodeGraphic extends ButtonBase {
         )
     }
 
-    changeColor() {
-        ease.add(this, { blend: [this.tint, GameApp.theme?.mainColor] }, { duration: CHANGE_ALGORITHM_TRANSITION_DURATION })
-        ease.add(this.centerGraphic, { blend: [this.centerGraphic.tint, GameApp.theme?.bgColor] }, { duration: CHANGE_ALGORITHM_TRANSITION_DURATION })
+    updateText() {
 
+        this.text.text = this.index
+        this.text.pivot.x = this.text.width / 2
+        this.text.pivot.y = this.text.height / 2
+    }
+
+    changeColor(instant?: boolean) {
+        if (instant) {
+            this.tint = GameApp.theme.mainColor
+            this.centerGraphic.tint = GameApp.theme.bgColor
+        } else {
+            ease.add(this, { blend: [this.tint, GameApp.theme?.mainColor] }, { duration: CHANGE_ALGORITHM_TRANSITION_DURATION })
+            ease.add(this.centerGraphic, { blend: [this.centerGraphic.tint, GameApp.theme?.bgColor] }, { duration: CHANGE_ALGORITHM_TRANSITION_DURATION })
+        }
         // this.tint = GameApp.theme?.mainColor
         // this.centerGraphic.tint = GameApp.theme?.secondaryColor
     }
 
     get index() { return this.parent?.getChildIndex(this) }
 
-    destroy(options?: boolean | PIXI.IDestroyOptions): void {
+    destroy(options?: PIXI.IDestroyOptions): void {
+        this.deleted = true
         ease.add(
             this,
             { scale: 0 },
             { duration: animationDuration, ease: 'easeInBack' }
         ).once("complete", () => {
-            super.destroy(options)
+            super.destroy({ ...options, children: true })
+            nodes.updateNodesText()
         })
     }
 

@@ -1,8 +1,7 @@
 import { nodes, ui } from "../../main";
 import { algorithmGraphic } from "../app";
 import { NodeData } from "../node/Nodes";
-import { PillButton } from "../ui/PillButton";
-import { SearchAlgorithmBase, drawRoute, getRouteDist } from "./SearchAlgorithmBase";
+import { SearchAlgorithmBase, getRouteDist } from "./SearchAlgorithmBase";
 
 var attractivenesses: number[][]
 const dstPower = 4
@@ -152,10 +151,13 @@ export class AntColonyAlgorithm extends SearchAlgorithmBase {
 
     constructor(algorithmName: string) {
         super(algorithmName)
-        this.maxGens = 9999
+        this.maxGens = 10000
+        this.clearOnDraw = false
 
-        const btn = ui.addChild(new PillButton(100, 600, 40, 40))
-        btn.onClick = () => this.showPheromones = !this._drawPheromones
+        // this.options.push(
+        //     () => new TextOption("DrPh", () => this.showPheromones = !this._drawPheromones),
+        //     () => new TextOption("x1", () => this.showPheromones = !this._drawPheromones)
+        // )
     }
 
     reset(): void {
@@ -168,6 +170,7 @@ export class AntColonyAlgorithm extends SearchAlgorithmBase {
 
     async computeGeneration() {
         // this.clear()
+        console.log("compute ants")
 
         let routesAndDistances: { route: number[], distance: number }[] = []
 
@@ -178,33 +181,24 @@ export class AntColonyAlgorithm extends SearchAlgorithmBase {
 
         routesAndDistances.sort((a, b) => a.distance - b.distance)
 
-        // drawRoute(this, routesAndDistances[3].route, 0x001111)
-        // drawRoute(this, routesAndDistances[2].route, 0x002222)
-        // drawRoute(this, routesAndDistances[1].route, 0x004444)
-        // drawRoute(this, routesAndDistances[0].route, 0x00ffff)
-
         updatePheromoneTrail(routesAndDistances)
-        // console.log("add path", routesAndDistances[0].route)
 
-        this.generations.pop() // pop the [] from parent - TODO REMOVE
+        if (this.generations.length >= this.maxGens - 1)
+            this.generations.pop() // pop the [] from parent - TODO REMOVE
         this.generations.push(routesAndDistances[0].route)
-
-        if (this._drawPheromones)
-            this.drawPheromone()
 
         this.drawBestGeneration()
     }
 
-    set showPheromones(d: boolean) {
-        this._drawPheromones = d
-        if (d)
-            this.drawPheromone()
-        else {
-            algorithmGraphic.clear()
-            this.drawBestGeneration()
-        }
-
-    }
+    // set showPheromones(d: boolean) {
+    //     this._drawPheromones = d
+    //     if (d)
+    //         this.drawPheromone()
+    //     else {
+    //         algorithmGraphic.clear()
+    //         this.drawBestGeneration()
+    //     }
+    // }
 
     drawPheromone() {
         algorithmGraphic.clear()
@@ -220,7 +214,7 @@ export class AntColonyAlgorithm extends SearchAlgorithmBase {
         }
         for (let i = 0; i < pheromones.length; i++) {
             for (let j = 0; j < pheromones[i].length; j++) {
-                algorithmGraphic.lineStyle(3, 0xffffff, pheromones[i][j] / maxPheromone)
+                algorithmGraphic.lineStyle(1.5, 0xffffff, pheromones[i][j] / maxPheromone)
 
                 initialNode = nodes.getNode(i)
                 finalNode = nodes.getNode(j)
@@ -232,6 +226,11 @@ export class AntColonyAlgorithm extends SearchAlgorithmBase {
         }
     }
 
-    // drawGeneration(num?: number): void {
-    // }
+    // TODO
+    drawGeneration(genNum?: number, updateUI?: boolean): void {
+        if (this._drawPheromones)
+            this.drawPheromone()
+        console.log("DG", genNum)
+        super.drawGeneration(genNum, updateUI)
+    }
 }

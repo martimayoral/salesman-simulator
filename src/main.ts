@@ -12,7 +12,7 @@ export const CHANGE_ALGORITHM_TRANSITION_DURATION = 500
 
 export const nodes = new Nodes()
 
-export const App = new GameApp(document.body, window.innerWidth, window.innerHeight);
+export const gameApp = new GameApp(document.body, window.innerWidth, window.innerHeight);
 export const ui = new UI()
 export const bg = new Background()
 
@@ -41,28 +41,28 @@ export const searchAlgorithms: {
     "Random path": {
         algorithm: new RandomPathAlgorithm("Random path"),
         theme: {
-            bgColor: 0xC0DBEA,
-            mainColor: 0xE8A0BF,
-            secondaryColor: 0xBA90C6,
-            contrastColor: 0x000000
+            bgColor: 0x424874,
+            mainColor: 0xF4EEFF,
+            secondaryColor: 0xDCD6F7,
+            contrastColor: 0xA6B1E1
         }
     },
     "Heaps combinations": {
         algorithm: new HeapsCombinations("Heaps combinations"),
         theme: {
-            bgColor: 0x125100,
-            mainColor: 0xccc3f1,
-            secondaryColor: 0x00ffff,
-            contrastColor: 0x000000
+            bgColor: 0x8EC3B0,
+            mainColor: 0xDEF5E5,
+            secondaryColor: 0xBCEAD5,
+            contrastColor: 0x9ED5C5
         }
     },
     "Ant colony optimization": {
         algorithm: new AntColonyAlgorithm("Ant colony optimization"),
         theme: {
-            bgColor: 0x051259,
-            mainColor: 0x12fff1,
-            secondaryColor: 0x00ffff,
-            contrastColor: 0x000000
+            bgColor: 0xAA4A30,
+            mainColor: 0xEDCFA9,
+            secondaryColor: 0xE89F71,
+            contrastColor: 0xD57149
         }
     },
 }

@@ -2,6 +2,9 @@ import * as PIXI from 'pixi.js'
 import { ButtonBase } from './ButtonBase';
 
 export class PillButton extends ButtonBase {
+    centerX: boolean = true
+    centerY: boolean = true
+
     constructor(x?: number, y?: number, width?: number, height?: number) {
         super()
         if (x !== undefined)
@@ -12,8 +15,15 @@ export class PillButton extends ButtonBase {
         this.x = x
         this.y = y
 
-        this.pivot.x = width / 2
-        this.pivot.y = height / 2
+        if (this.centerX)
+            this.pivot.x = width / 2
+        else
+            this.pivot.x = 0
+        if (this.centerY)
+            this.pivot.y = height / 2
+        else
+            this.pivot.y = 0
+
 
         this.clear()
             .beginFill(0xFFFFFF)

@@ -20,4 +20,8 @@ export class InOrderAlgorithm extends SearchAlgorithmBase {
             this.addPath(i)
         }
     }
+    
+    drawBestGeneration(): void {
+        this.drawGeneration()
+    }
 }

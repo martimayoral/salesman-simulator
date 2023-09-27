@@ -3,6 +3,10 @@ import { DistanceBetweenNodes, NodeData, NodeGroup } from '../node/Nodes'
 import { algorithmGraphic } from '../app'
 import { getRandomId } from '../utils'
 import { nodes, ui } from '../../main'
+import { TextOption } from '../ui/Options'
+import { ButtonBase } from '../ui/ButtonBase'
+
+export type AlgorithmSpeed = "slow" | "normal" | "fast"
 
 export function getRouteDist(route: number[]) {
     var tourDist = 0
@@ -17,7 +21,7 @@ export function getRouteDist(route: number[]) {
     return tourDist
 }
 
-export function drawRoute(graphic: PIXI.Graphics, route: number[], pathColor?: number) {
+function drawRoute(graphic: PIXI.Graphics, route: number[], pathColor?: number) {
     if (pathColor)
         graphic.lineStyle(3, pathColor)
 
@@ -36,50 +40,122 @@ export class SearchAlgorithmBase {
     private _algorithmName: string
     get algorithmName() { return this._algorithmName }
 
+    static speed: AlgorithmSpeed
+
     generations: number[][]
-    bestGenerations: number[][]
+    bestGenerations: number[]
     bestDist: number | undefined
     _startId: string
+    clearOnDraw: boolean
 
     isRunning = false
 
     maxGens: number = 10000
 
-    get currentGeneration() {
-        return this.generations[this.generations.length - 1]
-    }
+    options: (() => ButtonBase)[]
+
+    currentGenNum: number
 
     constructor(algorithmName: string) {
         this._algorithmName = algorithmName
         // this.reset()
+        this.options = []
+        this.clearOnDraw = true
+        this.reset()
+        this.drawGeneration()
     }
 
     reset() {
         algorithmGraphic.clear()
+        this.currentGenNum = 0
         this.bestDist = undefined
         this.generations = []
-        this.bestGenerations = []
+        this.bestGenerations = [0]
         this._startId = getRandomId()
-        this.computeGeneration()
-        // console.log("DRAW ROUTE", this.isRunning)
-        this.uiSetGenNumText()
+    }
 
-        const genDist = getRouteDist(this.generations[this.generations.length - 1])
-        ui.bestDistText = genDist
+    computeFirstGen() {
+        if (this.generations.length > 0) {
+            // console.log("this.generations.length > 0", this.algorithmName)
+            return
+        }
 
+        for (let i = 0; i < 1000 || this.generations.length === 0; i++) {
+            if (this.generations.length === 0) {
+                this.computeGeneration()
+            }
+        }
+
+        if (this.generations.length === 0)
+            throw Error("Couldnt compute First Gen")
+
+        this.updateBestDist()
+    }
+
+    updateBestDist() {
+        if (this.generations.length === 0) this.computeFirstGen()
+        // console.log("gen:", this.generations, getRouteDist(this.generations[this.generations.length - 1]))
+        this.bestDist = getRouteDist(this.generations[this.bestGenerations[this.bestGenerations.length - 1]])
+        ui.updateBestDist()
+    }
+
+    drawGeneration(genNum?: number, updateUI?: boolean) {
+        if (this.generations.length === 0) return
+
+        var num = this.generations.length - 1 // draw last generation
+        if (genNum !== undefined && genNum < this.generations.length) // if we can draw gen num just draw gen num
+            num = genNum
+        else if ( // if there is best generation
+            this.bestGenerations.length > 0 &&
+            this.bestGenerations[this.bestGenerations.length - 1] < this.generations.length
+        ) {
+            num = this.bestGenerations[this.bestGenerations.length - 1]
+        }
+
+        console.log("Draw gen", num, genNum, updateUI)
+
+        // console.log("Drawing gen", num)
+        if (this.clearOnDraw)
+            algorithmGraphic.clear()
         algorithmGraphic.lineStyle(3, 0xffffff)
-        drawRoute(algorithmGraphic, this.generations[0])
+
+
+        this.currentGenNum = num
+        drawRoute(algorithmGraphic, this.generations[num])
+
+        if (updateUI) {
+            ui.setGenNumText(num)
+            ui.bestDistText = getRouteDist(this.generations[num])
+        }
+    }
+
+    canDrawPrevGen() {
+        return this.generations[this.currentGenNum - 1]
+    }
+    drawPrevGen() {
+        if (!this.canDrawPrevGen()) return
+
+        console.log("drawPrevGen", this.currentGenNum - 1)
+        this.drawGeneration(this.currentGenNum - 1, true)
+    }
+    canDrawNextGen() {
+        return this.generations[this.currentGenNum + 1]
+    }
+    drawNextGen() {
+        if (!this.canDrawNextGen()) return
+
+        this.drawGeneration(this.currentGenNum + 1, true)
     }
 
     start() {
-        // console.log("start", this.algorithmName)
+        console.log("start", this.algorithmName)
         this.isRunning = true
         this.newGeneration(this._startId)
     }
 
     stop() {
+        console.log("stop", this.algorithmName)
         this.isRunning = false
-        // console.log("stop", this.algorithmName)
     }
 
     async computeGeneration(generationData: any = undefined) {
@@ -87,11 +163,8 @@ export class SearchAlgorithmBase {
         console.warn("No generation algorithm running")
     }
 
-    uiSetGenNumText() {
-        ui.setGenNumText(this.generations.length, this.maxGens)
-    }
-
     newGeneration(genStartId: string): void {
+        ui.setGenNumText(this.generations.length)
 
         new Promise((resolve) => {
             // console.log("START PROMISE", genStartId, this._startId)
@@ -104,11 +177,20 @@ export class SearchAlgorithmBase {
             });
         }).then(() => {
             // console.log("THEN PROMISE", genStartId, this._startId)
-            if (this.generations.length < this.maxGens && this._startId === genStartId && this.isRunning) {
-                this.uiSetGenNumText()
-                this.newGeneration(genStartId)
-            }
+            setTimeout(() => {
+                if (this.conditionToContinue(genStartId)) {
+                    ui.setGenNumText(this.generations.length)
+                    this.newGeneration(genStartId)
+                    this.currentGenNum = this.generations.length - 1
+                    // console.log("set gen num", this.currentGenNum,this.generations.length - 1)
+                }
+            }, SearchAlgorithmBase.speed === "fast" ? 0 : SearchAlgorithmBase.speed === "normal" ? 50 : 1000);
         })
+    }
+
+    conditionToContinue(genStartId: string) {
+        // console.log("conditionToContinue", this.generations.length <= this.maxGens, this._startId === genStartId, this.isRunning)
+        return this.generations.length <= this.maxGens && this._startId === genStartId && this.isRunning
     }
 
     addPath(nodeIndex: number) {
@@ -116,37 +198,26 @@ export class SearchAlgorithmBase {
     }
 
     checkIfIsBestDist() {
-        const genDist = getRouteDist(this.generations[this.generations.length - 1])
+        const genNum = this.generations.length - 1
+        const genDist = getRouteDist(this.generations[genNum])
         if (genDist >= this.bestDist) // find shortest
             // if (genDist < this.bestDist) // find longest
             // if (this.bestDist) // only run once
             return false
 
-        // console.log("new best genDist", genDist)
-
-        ui.bestDistText = genDist
+        console.log("new best genDist", genDist)
+        ui.updateBestDist()
 
         this.bestDist = genDist
-        this.bestGenerations.push(this.currentGeneration)
+        this.bestGenerations.push(genNum)
 
-        algorithmGraphic.clear()
-        this.drawBestGeneration()
+        this.drawGeneration(genNum)
         return true
     }
 
-
-    drawBestGeneration(num: number = this.bestGenerations.length - 1) {
-        if (num < 0) return
-
-        algorithmGraphic.lineStyle(3, 0xffffff)
-        // console.log("draw generation")
-
-        const generation = this.bestGenerations[num]
-        if (!generation) {
-            console.error("generation", num, "not found")
-            return
-        }
-
-        drawRoute(algorithmGraphic, generation)
+    drawBestGeneration() {
+        console.log("drawbestGen")
+        const lastBestNum = this.bestGenerations[this.bestGenerations.length - 1]
+        this.drawGeneration(lastBestNum)
     }
 }

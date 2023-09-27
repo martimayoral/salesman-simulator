@@ -1,11 +1,11 @@
 import * as PIXI from 'pixi.js'
 import { Nodes } from './node/Nodes';
 import { RandomPathAlgorithm } from './Search Algorithms/RandomPath';
-import { SearchAlgorithmBase } from './Search Algorithms/SearchAlgorithmBase';
+import { AlgorithmSpeed, SearchAlgorithmBase } from './Search Algorithms/SearchAlgorithmBase';
 import { UI } from './ui/ui';
 import { Background, BgChangeDirection } from './Background';
 import { InOrderAlgorithm } from './Search Algorithms/InOrderAlgorithm';
-import { HeapsCombinations } from './Search Algorithms/HeapsCombinations';
+import { HeapsCombinations } from './Search Algorithms/HeapsCombinationsOld';
 import { AntColonyAlgorithm } from './Search Algorithms/AntColonyAlgorithm';
 import Cookies from "js-cookie";
 import { CHANGE_ALGORITHM_TRANSITION_DURATION, Theme, bg, nodes, searchAlgorithms, ui } from '../main';
@@ -18,35 +18,52 @@ export const appBgColor = 0x121212
 
 export class GameApp extends PIXI.Application {
     static theme: Theme
-    currentSearchAlgorithmName: string
+    static currentSearchAlgorithmName: string
 
     constructor(parent: HTMLElement, width: number, height: number) {
         super({ width, height, backgroundColor: appBgColor, antialias: true })
         parent.replaceChild(this.view, parent.lastElementChild) // Hack for parcel HMR
 
+        console.log("START")
         this.stage.hitArea = this.screen;
         this.stage.interactive = true
 
-        if (nodes.numNodes === 0)
-            for (let i = 0; i < N_INITIAL_NODES; i++) {
-                nodes.addNode(
-                    Math.floor(Math.random() * this.screen.width),
-                    Math.floor(Math.random() * this.screen.height),
-                    { triggerOnNodesChange: false }
-                )
-            }
-
+        setTimeout(() => {
+            console.log("REMOVE COOKIES")
+            Cookies.remove("algorithmSpeed")
+            Cookies.remove("currentSearchAlgorithmName")
+            Cookies.remove("nodesPositions")
+        }, 1000);
 
         setTimeout(() => {
+            console.log("bbb")
+            if (nodes.numNodes === 0) {
+                for (let i = 0; i < N_INITIAL_NODES; i++) {
+                    nodes.addNode(
+                        undefined,
+                        undefined,
+                        { triggerOnNodesChange: i === N_INITIAL_NODES - 1 }
+                    )
+                }
+            }
+            console.log("ccc")
+
             var algorithmToRun = Cookies.get("currentSearchAlgorithmName")
             if (!algorithmToRun)
                 algorithmToRun = "Heaps combinations"
 
+            console.log("ddd")
             this.setAlgorithm(algorithmToRun)
-            // searchAlgorithms[this.currentSearchAlgorithmName].algorithm.reset()
+            // searchAlgorithms[GameApp.currentSearchAlgorithmName].algorithm.reset()
             // this.startAlgorithm()
+            console.log("eee")
 
             // this.stage.addChild(this.searchAlgorithms[this.currentSearchAlgorithmIndex])
+            var algorithmSpeed = Cookies.get("algorithmSpeed")
+            if (!algorithmSpeed)
+                algorithmSpeed = "normal"
+            this.changeAlgorithmSpeed(algorithmSpeed as AlgorithmSpeed)
+
 
             this.stage.addChild(bg)
             this.stage.addChild(algorithmGraphic)
@@ -55,16 +72,23 @@ export class GameApp extends PIXI.Application {
             this.resizeRenderer()
         })
 
-        document.body.onresize = () => {
-            this.resizeRenderer()
-        }
+        // document.body.onresize = () => {
+        //     this.resizeRenderer()
+        // }
     }
 
     changeTheme(algorithmName: string, theme: Theme, direction: BgChangeDirection = "instant") {
         bg.changeBg(theme.bgColor, direction)
-        ui.changeTheme(algorithmName, theme, direction)
-        nodes.changeNodesColor()
+        ui.changeTheme(algorithmName, direction)
+        nodes.changeNodesColor(direction === 'instant')
         ease.add(algorithmGraphic, { blend: [algorithmGraphic.tint, theme.mainColor] }, { duration: CHANGE_ALGORITHM_TRANSITION_DURATION })
+    }
+
+    changeAlgorithmSpeed(newSpeed: AlgorithmSpeed) {
+        console.log("changeAlgorithmSpeed")
+        Cookies.set("algorithmSpeed", newSpeed)
+        ui.changeSpeedGraphic(newSpeed)
+        SearchAlgorithmBase.speed = newSpeed
     }
 
     setAlgorithm(name: string, direction: BgChangeDirection = "instant") {
@@ -74,20 +98,24 @@ export class GameApp extends PIXI.Application {
             return
         }
         var wasPrevAlgorithmRunning: boolean = true
-        if (this.currentSearchAlgorithmName) {
-            const prevAlgorithmRunning = searchAlgorithms[this.currentSearchAlgorithmName].algorithm
+        if (GameApp.currentSearchAlgorithmName) {
+            const prevAlgorithmRunning = searchAlgorithms[GameApp.currentSearchAlgorithmName].algorithm
             wasPrevAlgorithmRunning = prevAlgorithmRunning.isRunning
             prevAlgorithmRunning.stop()
         }
 
+        newAlgorithmToRun.algorithm.computeFirstGen()
+        newAlgorithmToRun.algorithm.drawGeneration()
+        ui.setGenNumText(newAlgorithmToRun.algorithm.generations.length)
 
-        newAlgorithmToRun.algorithm.reset()
+        // newAlgorithmToRun.algorithm.reset()
         if (wasPrevAlgorithmRunning)
             newAlgorithmToRun.algorithm.start()
 
-        this.currentSearchAlgorithmName = name
+        GameApp.currentSearchAlgorithmName = name
         GameApp.theme = newAlgorithmToRun.theme
-        this.changeTheme(this.currentSearchAlgorithmName, newAlgorithmToRun.theme, direction)
+        this.changeTheme(GameApp.currentSearchAlgorithmName, newAlgorithmToRun.theme, direction)
+        ui.changeAlgorithmOptions(newAlgorithmToRun.algorithm.options, direction)
 
         Cookies.set("currentSearchAlgorithmName", name)
     }
@@ -95,7 +123,7 @@ export class GameApp extends PIXI.Application {
     nextAlgorithm() {
         const algorithmsList = Object.keys(searchAlgorithms)
         for (let i = 0; i < algorithmsList.length; i++) {
-            if (algorithmsList[i] === this.currentSearchAlgorithmName) {
+            if (algorithmsList[i] === GameApp.currentSearchAlgorithmName) {
                 if (i + 1 < algorithmsList.length)
                     this.setAlgorithm(algorithmsList[i + 1], "right")
                 else
@@ -104,10 +132,11 @@ export class GameApp extends PIXI.Application {
             }
         }
     }
+
     previousAlgorithm() {
         const algorithmsList = Object.keys(searchAlgorithms)
         for (let i = 0; i < algorithmsList.length; i++) {
-            if (algorithmsList[i] === this.currentSearchAlgorithmName) {
+            if (algorithmsList[i] === GameApp.currentSearchAlgorithmName) {
                 if (i - 1 >= 0)
                     this.setAlgorithm(algorithmsList[i - 1], "left")
                 else
@@ -120,18 +149,46 @@ export class GameApp extends PIXI.Application {
 
     onNodesChange() {
         // console.clear()
-        searchAlgorithms[this.currentSearchAlgorithmName].algorithm.reset()
-        if (searchAlgorithms[this.currentSearchAlgorithmName].algorithm.isRunning)
-            searchAlgorithms[this.currentSearchAlgorithmName].algorithm.start()
+        const algorithms = Object.values(searchAlgorithms)
+        for (let i = 0; i < algorithms.length; i++) {
+            algorithms[i].algorithm.reset()
+        }
+
+        const currentAlgorithm = searchAlgorithms[GameApp.currentSearchAlgorithmName]?.algorithm
+
+        if (!currentAlgorithm)
+            return
+        
+        currentAlgorithm.reset()
+        currentAlgorithm.computeFirstGen()
+        currentAlgorithm.updateBestDist()
+        currentAlgorithm.drawGeneration()
+        ui.setGenNumText(currentAlgorithm.generations.length)
+
+        // searchAlgorithms[GameApp.currentSearchAlgorithmName].algorithm.drawGeneration(0)
+
+        if (currentAlgorithm.isRunning)
+            currentAlgorithm.start()
     }
 
     stopAlgorithm() {
-        searchAlgorithms[this.currentSearchAlgorithmName].algorithm.stop()
-        ui.startStopButton.setStop()
+        searchAlgorithms[GameApp.currentSearchAlgorithmName].algorithm.stop()
+        ui.startStopButton.setPlay()
     }
     startAlgorithm() {
-        searchAlgorithms[this.currentSearchAlgorithmName].algorithm.start()
-        ui.startStopButton.setPlay()
+        searchAlgorithms[GameApp.currentSearchAlgorithmName].algorithm.start()
+        ui.startStopButton.setStop()
+    }
+
+    showPrevGen() {
+        const currentAlgorithm = searchAlgorithms[GameApp.currentSearchAlgorithmName].algorithm
+        // console.log("showPrevGen", currentAlgorithm.currentGenNum, currentAlgorithm.generations[currentAlgorithm.currentGenNum - 1])
+        currentAlgorithm.drawPrevGen()
+    }
+    showNextGen() {
+        // console.log("showNextGen")
+        const currentAlgorithm = searchAlgorithms[GameApp.currentSearchAlgorithmName].algorithm
+        currentAlgorithm.drawNextGen()
     }
 
     resizeRenderer() {

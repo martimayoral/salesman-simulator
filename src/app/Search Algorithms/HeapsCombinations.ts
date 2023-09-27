@@ -1,6 +1,6 @@
-import { App, nodes, ui } from "../../main";
-import { getRandomId } from "../utils";
+import { nodes } from "../../main";
 import { SearchAlgorithmBase } from "./SearchAlgorithmBase";
+
 
 function factorialize(num) {
     // Si el número es menor que 0, rechacelo. 
@@ -18,6 +18,11 @@ function factorialize(num) {
 }
 
 export class HeapsCombinations extends SearchAlgorithmBase {
+    ids: number[]
+    order: number[]
+    i: number
+    genStartId: string
+    loop: number
     finished: boolean
 
     constructor(algorithmName: string) {
@@ -26,88 +31,64 @@ export class HeapsCombinations extends SearchAlgorithmBase {
 
     reset(): void {
         this.maxGens = (factorialize(nodes.numNodes)) / 2
-        if (this.finished)
+        if (this.finished && this.isRunning)
             this.isRunning = true
-        super.reset()
-    }
 
-
-    startNewGen(ids: number[], order: number[], i: number, genStartId: string, loop: number) {
-        new Promise((resolve) => {
-            var isBest = false
-
-            if (order[i] < i) {
-                if (i % 2 === 0) {
-                    // Swap the first and i-th element
-                    [ids[0], ids[i]] = [ids[i], ids[0]];
-                } else {
-                    if (ids[order[i]] !== ids[i])
-                        // Swap the current element and i-th element
-                        [ids[order[i]], ids[i]] = [ids[i], ids[order[i]]];
-                }
-
-                const reversed = [...ids].reverse()
-                const isUnique = this.generations.every((perm) => perm.join('') !== reversed.join(''));
-                if (isUnique) {
-                    this.generations.push([...ids]);
-                    isBest = this.checkIfIsBestDist()
-                }
-
-                // console.log("GENERATIONS", ids)
-                order[i]++;
-                i = 0;
-            } else {
-                order[i] = 0;
-                i++;
-            }
-
-            if (isBest)
-                setTimeout(() => {
-                    resolve("")
-                }, 10)
-            else if (loop % 25 === 0) {
-                setTimeout(() => {
-                    resolve("")
-                })
-            }
-            else
-                resolve("")
-
-        }).then(() => {
-            ui.setGenNumText(this.generations.length, this.maxGens)
-
-            if (genStartId === this._startId && this.isRunning) {
-                if (i < nodes.allNodes.length)
-                    this.startNewGen(ids, order, i, genStartId, loop + 1)
-                else
-                    this.finished = true
-            }
-        })
-    }
-
-    newGeneration(genStartId: string): void {
-        // console.clear()
-
-        const order = Array(nodes.numNodes).fill(0)
-
-        const startingOrder = Array(nodes.numNodes).fill(0).map((zero, i) => i)
-
-        // this.generations.push(startingId)
-        // this.checkIfIsBestDist()
-
+        this.order = Array(nodes.numNodes).fill(0)
+        this.ids = Array(nodes.numNodes).fill(0).map((zero, i) => i)
+        this.i = 0
+        this.loop = 0
         this.finished = false
 
-        // console.log(startingOrder)
-        this.startNewGen(startingOrder, order, 0, genStartId, 0)
+        super.reset()
 
+    }
+
+    start(): void {
+        if (this.finished) {
+            this.reset()
+            this.computeFirstGen()
+        }
+        super.start()
     }
 
     async computeGeneration() {
-        this.generations.push([])
+        // var isBest = false
+        // console.log("computeGeneration", this.generations)
 
-        const nodesId = nodes.allNodes
-        for (let i = 0; i < nodesId.length; i++) {
-            this.addPath(i)
+        if (this.order[this.i] < this.i) {
+            if (this.i % 2 === 0) {
+                // Swap the first and i-th element
+                [this.ids[0], this.ids[this.i]] = [this.ids[this.i], this.ids[0]];
+            } else {
+                if (this.ids[this.order[this.i]] !== this.ids[this.i])
+                    // Swap the current element and i-th element
+                    [this.ids[this.order[this.i]], this.ids[this.i]] = [this.ids[this.i], this.ids[this.order[this.i]]];
+            }
+
+            const reversed = [...this.ids].reverse()
+            const isUnique = this.generations.every((perm) => perm.join('') !== reversed.join(''));
+            if (isUnique) {
+                this.generations.push([...this.ids])
+                // isBest = this.checkIfIsBestDist()
+            }
+
+            // console.log("GENERATIONS", this.ids)
+            this.order[this.i]++;
+            this.i = 0;
+        } else {
+            this.order[this.i] = 0;
+            this.i++;
+        }
+    }
+
+    conditionToContinue(genStartId: string): boolean {
+        if (super.conditionToContinue(genStartId)) {
+            if (this.i < nodes.allNodes.length)
+                return true
+
+            this.finished = true
+            return false
         }
     }
 }

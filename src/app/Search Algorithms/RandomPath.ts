@@ -19,9 +19,9 @@ export class RandomPathAlgorithm extends SearchAlgorithmBase {
         }
 
         var node: number
-        while (this.currentGeneration.length !== nodes.numNodes) {
+        while (this.generations[this.generations.length - 1].length !== nodes.numNodes) {
             node = getRandomNode()
-            if (!this.currentGeneration.includes(node))
+            if (!this.generations[this.generations.length - 1].includes(node))
                 this.addPath(node)
         }
     }

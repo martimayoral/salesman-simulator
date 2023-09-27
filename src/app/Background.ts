@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js'
-import { App, CHANGE_ALGORITHM_TRANSITION_DURATION, nodes } from '../main'
+import { gameApp, CHANGE_ALGORITHM_TRANSITION_DURATION, nodes } from '../main'
 import { ease } from 'pixi-ease'
 import { appBgColor } from './app'
 
@@ -19,6 +19,9 @@ function onPointerUp(this: Background, e: PIXI.InteractionEvent) {
 }
 
 export type BgChangeDirection = "right" | "left" | "instant"
+export function directionToWidth(direction: BgChangeDirection) {
+    return direction === "left" ? -(gameApp.screen.width + spaceBetweenBg) : direction === "right" ? (gameApp.screen.width + spaceBetweenBg) : 0
+}
 const spaceBetweenBg = 150
 
 export class Background extends PIXI.Container {
@@ -40,11 +43,11 @@ export class Background extends PIXI.Container {
         setTimeout(() => {
             this.mainBg.clear()
                 .beginFill(0xffffff)
-                .drawRoundedRect(0, 0, App.screen.width, App.screen.height, 50)
+                .drawRoundedRect(0, 0, gameApp.screen.width, gameApp.screen.height, 50)
                 .endFill()
             this.transitionBg.clear()
                 .beginFill(0xffffff)
-                .drawRoundedRect(0, 0, App.screen.width, App.screen.height, 50)
+                .drawRoundedRect(0, 0, gameApp.screen.width, gameApp.screen.height, 50)
                 .endFill()
 
             // this.mainBg.tint = 0x232334
@@ -61,10 +64,10 @@ export class Background extends PIXI.Container {
         this.mainBg.tint = this.transitionBg.tint
         this.transitionBg.tint = color
 
-        const invert = direction === "left" ? 1 : -1
+        const directionWidth = directionToWidth(direction)
 
-        const moveMain = ease.add(this.mainBg, { x: (App.screen.width + spaceBetweenBg) * invert }, { duration: CHANGE_ALGORITHM_TRANSITION_DURATION })
-        this.transitionBg.x = -(App.screen.width + spaceBetweenBg) * invert
+        const moveMain = ease.add(this.mainBg, { x: -directionWidth }, { duration: CHANGE_ALGORITHM_TRANSITION_DURATION })
+        this.transitionBg.x = directionWidth
         ease.add(this.transitionBg, { x: 0 }, { duration: CHANGE_ALGORITHM_TRANSITION_DURATION })
         moveMain.once("complete", () => {
             this.mainBg.x = 0
