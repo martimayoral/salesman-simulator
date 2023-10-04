@@ -1,10 +1,11 @@
 import * as PIXI from 'pixi.js'
-import { NodeGraphic } from "./NodeGraphic"
-import { gameApp, CHANGE_ALGORITHM_TRANSITION_DURATION, nodes } from '../../main'
+import { AlgorithmNode } from "./AlgorithmNode"
+import { gameApp, CHANGE_ALGORITHM_TRANSITION_DURATION, nodes, ui } from '../../main'
 import { getRandomId } from '../utils'
 import Cookies from 'js-cookie'
 import { ease } from 'pixi-ease'
-import { GameApp } from '../app'
+import { GameApp, algorithmGraphic } from '../app'
+import { NodesButtons, RemoveNodeButton } from '../ui/NodesButtons'
 
 export interface NodeData {
     x: number,
@@ -24,16 +25,68 @@ function getRandomNodePosition() {
     }
 }
 
+let clickData: { time: number, x: number, y: number } = { time: 0, x: 0, y: 0 }
+const MS_TO_DELETE_NODE = 200
+
+function onDragEnd(e: PIXI.InteractionEvent) {
+    if (nodes.draggingNode) {
+        gameApp.stage.off('pointermove', onDragMove);
+        gameApp.stage.off('pointerup', onDragEnd)
+        gameApp.stage.off('pointerupoutside', onDragEnd)
+
+        const index = nodes.draggingNode.index
+
+
+        if (clickData.x === nodes.draggingNode.x
+            && clickData.y === nodes.draggingNode.y) {
+
+            if (clickData.time + MS_TO_DELETE_NODE < Date.now() && !(e.target instanceof RemoveNodeButton))
+                nodes.deleteNode(index)
+        } else {
+
+            if (e.target instanceof RemoveNodeButton) {
+                ui.nodesButtons.onNodeOut()
+                nodes.deleteNode(index)
+                nodes.draggingNode = null;
+                return
+            }
+
+            if (!(e.target instanceof AlgorithmNode)) {
+
+                const randomPosition = getRandomNodePosition()
+                nodes.draggingNode.parent.toLocal(randomPosition, null, nodes.draggingNode.position)
+                nodes.moveNodeData(nodes.draggingNode.index, nodes.draggingNode.x, nodes.draggingNode.y)
+            }
+
+        }
+
+        nodes.draggingNode = null;
+    }
+}
+function onDragMove(event: PIXI.InteractionEvent) {
+    if (nodes.draggingNode) {
+
+        if (event.target instanceof RemoveNodeButton) {
+            ui.nodesButtons.onNodeOnTop();
+        } else
+            ui.nodesButtons.onNodeOut()
+
+        nodes.draggingNode.parent.toLocal(event.data.global, null, nodes.draggingNode.position)
+        nodes.moveNodeData(nodes.draggingNode.index, nodes.draggingNode.x, nodes.draggingNode.y)
+    }
+}
+
 const MIN_NODES = 2
 const MAX_NODES = 50
 
 export class Nodes {
-    private _nodesGraphic: PIXI.Container<NodeGraphic>
+    private _nodesGraphic: PIXI.Container<AlgorithmNode>
     private _nodes: NodeGroup = []
     public get graphic() { return this._nodesGraphic }
+    draggingNode: AlgorithmNode = null;
 
     constructor() {
-        this._nodesGraphic = new PIXI.Container<NodeGraphic>()
+        this._nodesGraphic = new PIXI.Container<AlgorithmNode>()
 
         var rawNodesPositions = Cookies.get("nodesPositions")
         // if (!rawNodesPositions) {
@@ -47,7 +100,16 @@ export class Nodes {
             }
             this.updateNodesText()
         }
-        console.log("aaa")
+    }
+
+    startDraggingNode(node: AlgorithmNode) {
+        this.draggingNode = node
+
+        clickData = { time: Date.now(), x: node.position.x, y: node.position.y }
+
+        gameApp.stage.on('pointermove', onDragMove)
+        gameApp.stage.on('pointerup', onDragEnd)
+        gameApp.stage.on('pointerupoutside', onDragEnd)
     }
 
     updateNodesText() {
@@ -55,7 +117,7 @@ export class Nodes {
     }
 
     onNodesChange() {
-        console.log("nodes changed")
+        // console.log("nodes changed")
         gameApp.onNodesChange()
         Cookies.set("nodesPositions", JSON.stringify(this._nodes))
         this.updateNodesText()
@@ -73,6 +135,7 @@ export class Nodes {
     reArrangeNodes() {
         // const nodesGraphics = [...this._nodesGraphic.children]
         const nodeData = [...this._nodes]
+        // console.log("nodeData:", nodeData)
 
         this._nodes = []
         this._nodesGraphic.removeChildren()
@@ -80,6 +143,7 @@ export class Nodes {
         for (let i = 0; i < nodeData.length; i++) {
             this.addNode()
         }
+        // console.log("nodessData:", this._nodes)
 
         this.onNodesChange()
     }
@@ -111,7 +175,7 @@ export class Nodes {
         this.onNodesChange()
     }
 
-    getNodeGraphics(): NodeGraphic[] {
+    getNodeGraphics(): AlgorithmNode[] {
         return this._nodesGraphic.children.filter(n => !n.deleted)
     }
 
@@ -151,9 +215,11 @@ export class Nodes {
 
         this._nodes.push({ x, y })
 
-        this._nodesGraphic.addChild(new NodeGraphic(x, y))
+        const algorithmNode = this._nodesGraphic.addChild(new AlgorithmNode(x, y))
         if (options.triggerOnNodesChange)
             this.onNodesChange()
+
+        return algorithmNode
     }
 
     changeNodesColor(instant?: boolean) {

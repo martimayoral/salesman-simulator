@@ -2,7 +2,7 @@ import * as PIXI from 'pixi.js'
 import { PillButton } from "./PillButton"
 
 const defaultStlye: Partial<PIXI.TextStyle> = {
-    align: "center"
+    align: "center", fill: 0xffffff
 }
 
 export class TextButton extends PillButton {

@@ -9,6 +9,9 @@ import { ButtonBase } from '../ui/ButtonBase'
 export type AlgorithmSpeed = "slow" | "normal" | "fast"
 
 export function getRouteDist(route: number[]) {
+    if (!route)
+        return
+
     var tourDist = 0
     for (let i = 0; i < route.length - 1; i++) {
         const node1 = nodes.getNode(route[i])
@@ -75,13 +78,18 @@ export class SearchAlgorithmBase {
     }
 
     computeFirstGen() {
+        // console.log("COMPUTUE FIRTS GEN", nodes.allNodes)
+        if (nodes.allNodes?.length <= 1) return
+
         if (this.generations.length > 0) {
             // console.log("this.generations.length > 0", this.algorithmName)
             return
         }
 
         for (let i = 0; i < 1000 || this.generations.length === 0; i++) {
+
             if (this.generations.length === 0) {
+                // console.log("computing gen", nodes.allNodes.length)
                 this.computeGeneration()
             }
         }
@@ -112,7 +120,7 @@ export class SearchAlgorithmBase {
             num = this.bestGenerations[this.bestGenerations.length - 1]
         }
 
-        console.log("Draw gen", num, genNum, updateUI)
+        // console.log("Draw gen", num, genNum, updateUI)
 
         // console.log("Drawing gen", num)
         if (this.clearOnDraw)
@@ -135,7 +143,7 @@ export class SearchAlgorithmBase {
     drawPrevGen() {
         if (!this.canDrawPrevGen()) return
 
-        console.log("drawPrevGen", this.currentGenNum - 1)
+        // console.log("drawPrevGen", this.currentGenNum - 1)
         this.drawGeneration(this.currentGenNum - 1, true)
     }
     canDrawNextGen() {
@@ -148,13 +156,13 @@ export class SearchAlgorithmBase {
     }
 
     start() {
-        console.log("start", this.algorithmName)
+        // console.log("start", this.algorithmName)
         this.isRunning = true
         this.newGeneration(this._startId)
     }
 
     stop() {
-        console.log("stop", this.algorithmName)
+        // console.log("stop", this.algorithmName)
         this.isRunning = false
     }
 
@@ -205,7 +213,7 @@ export class SearchAlgorithmBase {
             // if (this.bestDist) // only run once
             return false
 
-        console.log("new best genDist", genDist)
+        // console.log("new best genDist", genDist)
         ui.updateBestDist()
 
         this.bestDist = genDist
@@ -216,7 +224,7 @@ export class SearchAlgorithmBase {
     }
 
     drawBestGeneration() {
-        console.log("drawbestGen")
+        // console.log("drawbestGen")
         const lastBestNum = this.bestGenerations[this.bestGenerations.length - 1]
         this.drawGeneration(lastBestNum)
     }

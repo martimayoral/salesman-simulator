@@ -4,9 +4,6 @@ import { RandomPathAlgorithm } from './Search Algorithms/RandomPath';
 import { AlgorithmSpeed, SearchAlgorithmBase } from './Search Algorithms/SearchAlgorithmBase';
 import { UI } from './ui/ui';
 import { Background, BgChangeDirection } from './Background';
-import { InOrderAlgorithm } from './Search Algorithms/InOrderAlgorithm';
-import { HeapsCombinations } from './Search Algorithms/HeapsCombinationsOld';
-import { AntColonyAlgorithm } from './Search Algorithms/AntColonyAlgorithm';
 import Cookies from "js-cookie";
 import { CHANGE_ALGORITHM_TRANSITION_DURATION, Theme, bg, nodes, searchAlgorithms, ui } from '../main';
 import { ease } from 'pixi-ease';
@@ -24,19 +21,18 @@ export class GameApp extends PIXI.Application {
         super({ width, height, backgroundColor: appBgColor, antialias: true })
         parent.replaceChild(this.view, parent.lastElementChild) // Hack for parcel HMR
 
-        console.log("START")
+        // console.log("START")
         this.stage.hitArea = this.screen;
         this.stage.interactive = true
 
-        setTimeout(() => {
-            console.log("REMOVE COOKIES")
-            Cookies.remove("algorithmSpeed")
-            Cookies.remove("currentSearchAlgorithmName")
-            Cookies.remove("nodesPositions")
-        }, 1000);
+        // setTimeout(() => {
+        //     // console.log("REMOVE COOKIES")
+        //     Cookies.remove("algorithmSpeed")
+        //     Cookies.remove("currentSearchAlgorithmName")
+        //     Cookies.remove("nodesPositions")
+        // }, 1000);
 
         setTimeout(() => {
-            console.log("bbb")
             if (nodes.numNodes === 0) {
                 for (let i = 0; i < N_INITIAL_NODES; i++) {
                     nodes.addNode(
@@ -46,17 +42,14 @@ export class GameApp extends PIXI.Application {
                     )
                 }
             }
-            console.log("ccc")
 
             var algorithmToRun = Cookies.get("currentSearchAlgorithmName")
             if (!algorithmToRun)
-                algorithmToRun = "Heaps combinations"
+                algorithmToRun = "Ant colony optimization"
 
-            console.log("ddd")
             this.setAlgorithm(algorithmToRun)
             // searchAlgorithms[GameApp.currentSearchAlgorithmName].algorithm.reset()
             // this.startAlgorithm()
-            console.log("eee")
 
             // this.stage.addChild(this.searchAlgorithms[this.currentSearchAlgorithmIndex])
             var algorithmSpeed = Cookies.get("algorithmSpeed")
@@ -72,9 +65,9 @@ export class GameApp extends PIXI.Application {
             this.resizeRenderer()
         })
 
-        // document.body.onresize = () => {
-        //     this.resizeRenderer()
-        // }
+        document.body.onresize = () => {
+            this.resizeRenderer()
+        }
     }
 
     changeTheme(algorithmName: string, theme: Theme, direction: BgChangeDirection = "instant") {
@@ -85,7 +78,7 @@ export class GameApp extends PIXI.Application {
     }
 
     changeAlgorithmSpeed(newSpeed: AlgorithmSpeed) {
-        console.log("changeAlgorithmSpeed")
+        // console.log("changeAlgorithmSpeed")
         Cookies.set("algorithmSpeed", newSpeed)
         ui.changeSpeedGraphic(newSpeed)
         SearchAlgorithmBase.speed = newSpeed
@@ -158,7 +151,7 @@ export class GameApp extends PIXI.Application {
 
         if (!currentAlgorithm)
             return
-        
+
         currentAlgorithm.reset()
         currentAlgorithm.computeFirstGen()
         currentAlgorithm.updateBestDist()

@@ -90,5 +90,6 @@ export class HeapsCombinations extends SearchAlgorithmBase {
             this.finished = true
             return false
         }
+        return false
     }
 }

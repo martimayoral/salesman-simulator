@@ -151,7 +151,7 @@ export class AntColonyAlgorithm extends SearchAlgorithmBase {
 
     constructor(algorithmName: string) {
         super(algorithmName)
-        this.maxGens = 10000
+        this.maxGens = 1000
         this.clearOnDraw = false
 
         // this.options.push(
@@ -170,7 +170,7 @@ export class AntColonyAlgorithm extends SearchAlgorithmBase {
 
     async computeGeneration() {
         // this.clear()
-        console.log("compute ants")
+        // console.log("compute ants")
 
         let routesAndDistances: { route: number[], distance: number }[] = []
 
@@ -183,8 +183,8 @@ export class AntColonyAlgorithm extends SearchAlgorithmBase {
 
         updatePheromoneTrail(routesAndDistances)
 
-        if (this.generations.length >= this.maxGens - 1)
-            this.generations.pop() // pop the [] from parent - TODO REMOVE
+        // if (this.generations.length >= this.maxGens - 1)
+            // this.generations.slice() // pop the [] from parent - TODO REMOVE
         this.generations.push(routesAndDistances[0].route)
 
         this.drawBestGeneration()
@@ -230,7 +230,7 @@ export class AntColonyAlgorithm extends SearchAlgorithmBase {
     drawGeneration(genNum?: number, updateUI?: boolean): void {
         if (this._drawPheromones)
             this.drawPheromone()
-        console.log("DG", genNum)
+        // console.log("DG", genNum)
         super.drawGeneration(genNum, updateUI)
     }
 }

@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js'
 import { PillButton } from './PillButton'
-import { gameApp, CHANGE_ALGORITHM_TRANSITION_DURATION, Theme, searchAlgorithms } from '../../main'
+import { gameApp, CHANGE_ALGORITHM_TRANSITION_DURATION, Theme, searchAlgorithms, nodes } from '../../main'
 import { ButtonBase } from './ButtonBase'
 import { ease } from 'pixi-ease'
 import { TextButton } from './TextButton'
@@ -11,6 +11,9 @@ import med from './../../assets/images/hare.png'
 import slow from './../../assets/images/snail.png'
 import { GraphicButton } from './GraphicButton'
 import { AlgorithmSpeed } from '../Search Algorithms/SearchAlgorithmBase'
+import { AlgorithmNode } from '../node/AlgorithmNode'
+import { NodeGraphic } from '../node/NodeGraphic'
+import { NodesButtons } from './NodesButtons'
 
 const textStyle: Partial<PIXI.TextStyle> = { fill: 0xffffff, fontSize: 20 }
 
@@ -24,7 +27,7 @@ class AlgorithmTitle extends TextButton {
 
 
     constructor() {
-        super(0, 40, 5, 50, "", { fontSize: 35, fill: 0xffffff })
+        super(0, 40, 5, 50, "", { fontSize: 35 })
 
 
         this.addChild(this._bestDistText = new PIXI.Text("", textStyle))
@@ -152,29 +155,11 @@ class AlgorithmTitle extends TextButton {
 }
 
 
-// () => new TextOption("+10", () => {
-//     for (let i = 0; i < 10; i++) {
-//         setTimeout(() => {
-//             nodes.addNode()
-//         }, i * 50);
-//     }
-// }),
-// () => new TextOption("-10", () => {
-//     for (let i = 0; i < 10; i++) {
-//         setTimeout(() => {
-//             nodes.deleteNode(Math.floor(Math.random() * nodes.numNodes))
-//         }, i * 50);
-//     }
-// }),
-// () => new TextOption("rand", () => {
-//     nodes.reArrangeNodes()
-// })
-
-const PLAY_PAUSE_TRANSITION_DURATION = 200
-const buttonSize = 60
+export const HIDDEN_BUTTONS_TRANSITION_DURATION = 200
+export const buttonSize = 60
 
 // START BUTTON
-class StartStopButton extends PillButton {
+class StartStopButton extends ButtonBase {
     isStopped: boolean
 
     bar1: PIXI.Graphics
@@ -235,10 +220,11 @@ class StartStopButton extends PillButton {
 
         this.addChild(this.button)
         this.onPointerOver = () => {
-            if (this.isStopped)
-                this.showPlayBackButtons()
-            else
-                this.showSpeedButtons()
+            if (!!!nodes.draggingNode)
+                if (this.isStopped)
+                    this.showPlayBackButtons()
+                else
+                    this.showSpeedButtons()
         }
         this.onPointerOut = () => {
             this.hideSpeedButtons()
@@ -288,36 +274,36 @@ class StartStopButton extends PillButton {
     }
 
     showPlayBackButtons() {
-        ease.add(this.prevGenButton, { x: -23, alpha: 1 }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
-        ease.add(this.nextGenButton, { x: 23, alpha: 1 }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
+        ease.add(this.prevGenButton, { x: -23, alpha: 1 }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
+        ease.add(this.nextGenButton, { x: 23, alpha: 1 }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
     }
 
     hidePlayBackButtons() {
-        ease.add(this.prevGenButton, { x: 0, alpha: 0 }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
-        ease.add(this.nextGenButton, { x: 0, alpha: 0 }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
+        ease.add(this.prevGenButton, { x: 0, alpha: 0 }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
+        ease.add(this.nextGenButton, { x: 0, alpha: 0 }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
     }
 
     showSpeedButtons() {
-        ease.add(this.slowSpeedButton, { x: -24, y: -30, alpha: 1 }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
-        ease.add(this.normalSpeedButton, { y: -36, alpha: 1 }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
-        ease.add(this.fastSpeedButton, { x: 24, y: -30, alpha: 1 }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
+        ease.add(this.slowSpeedButton, { x: -24, y: -30, alpha: 1 }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
+        ease.add(this.normalSpeedButton, { y: -36, alpha: 1 }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
+        ease.add(this.fastSpeedButton, { x: 24, y: -30, alpha: 1 }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
         this.hideGenNum()
     }
 
     hideSpeedButtons() {
-        ease.add(this.slowSpeedButton, { x: 0, y: 0, alpha: 0 }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
-        ease.add(this.normalSpeedButton, { y: 0, alpha: 0 }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
-        ease.add(this.fastSpeedButton, { x: 0, y: 0, alpha: 0 }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
+        ease.add(this.slowSpeedButton, { x: 0, y: 0, alpha: 0 }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
+        ease.add(this.normalSpeedButton, { y: 0, alpha: 0 }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
+        ease.add(this.fastSpeedButton, { x: 0, y: 0, alpha: 0 }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
         this.showGenNum()
     }
 
     showGenNum() {
         // console.log("asfa", this.geometry.bounds.maxY)
-        ease.add(this._genNumText, { y: -this.button.geometry.bounds.maxY / 2 - 5, scale: 1 }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
+        ease.add(this._genNumText, { y: -this.button.geometry.bounds.maxY / 2 - 5, scale: 1 }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
     }
 
     hideGenNum() {
-        ease.add(this._genNumText, { y: -75, scale: .7 }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
+        ease.add(this._genNumText, { y: -75, scale: .7 }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
     }
 
     changeSpeedGraphic(speed: AlgorithmSpeed) {
@@ -361,9 +347,9 @@ class StartStopButton extends PillButton {
         this.showSpeedButtons()
         this.hidePlayBackButtons()
 
-        ease.add(this.bar1, { x: buttonSize * .35, y: buttonSize * .25 }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
-        ease.add(this.bar2, { x: buttonSize * .65, y: buttonSize * .25, rotation: 0 }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
-        ease.add(this.bar3, { x: buttonSize * .65, y: buttonSize * .75, rotation: -Math.PI }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
+        ease.add(this.bar1, { x: buttonSize * .35, y: buttonSize * .25 }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
+        ease.add(this.bar2, { x: buttonSize * .65, y: buttonSize * .25, rotation: 0 }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
+        ease.add(this.bar3, { x: buttonSize * .65, y: buttonSize * .75, rotation: -Math.PI }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
     }
 
     setPlay() {
@@ -371,15 +357,17 @@ class StartStopButton extends PillButton {
         this.hideSpeedButtons()
         this.showPlayBackButtons()
 
-        ease.add(this.bar1, { x: buttonSize * .43, y: buttonSize * .25 }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
-        ease.add(this.bar2, { x: buttonSize * .35, y: buttonSize * .25, rotation: -55 * PIXI.DEG_TO_RAD }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
-        ease.add(this.bar3, { x: buttonSize * .35, y: buttonSize * .7, rotation: -125 * PIXI.DEG_TO_RAD }, { duration: PLAY_PAUSE_TRANSITION_DURATION })
+        ease.add(this.bar1, { x: buttonSize * .43, y: buttonSize * .25 }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
+        ease.add(this.bar2, { x: buttonSize * .35, y: buttonSize * .25, rotation: -55 * PIXI.DEG_TO_RAD }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
+        ease.add(this.bar3, { x: buttonSize * .35, y: buttonSize * .7, rotation: -125 * PIXI.DEG_TO_RAD }, { duration: HIDDEN_BUTTONS_TRANSITION_DURATION })
     }
 }
+
 
 export class UI extends PIXI.Container {
     algorithmTextTitle: AlgorithmTitle
     startStopButton: StartStopButton
+    nodesButtons: NodesButtons
 
     algorithmOptions: ButtonBase[]
 
@@ -392,13 +380,14 @@ export class UI extends PIXI.Container {
         this.addChild(this.algorithmTextTitle)
 
         this.addChild(this.startStopButton = new StartStopButton())
-
+        this.addChild(this.nodesButtons = new NodesButtons())
     }
 
     resize() {
         setTimeout(() => {
             // START STOP BUTTON
             this.startStopButton.resize()
+            this.nodesButtons.resize()
 
             // Title
             this.algorithmTextTitle.x = gameApp.screen.width / 2
@@ -453,6 +442,7 @@ export class UI extends PIXI.Container {
         }
 
         this.startStopButton.changeTheme()
+        this.nodesButtons.changeTheme()
     }
 
 }
